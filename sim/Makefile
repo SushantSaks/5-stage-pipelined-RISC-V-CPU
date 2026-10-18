@@ -13,7 +13,7 @@ TOPLEVEL_LANG ?= verilog
 # Automatically enable FST waveform dumping by default (1 = enabled, 0 = disabled)
 WAVES ?= 1
 
-# Test selection: configurable via CLI (e.g. make MODULE=test_single_cycle TOPLEVEL=riscv_single_cycle)
+# Test selection: configurable via CLI (e.g. make MODULE=test_pipeline_basic TOPLEVEL=riscv_pipeline)
 MODULE ?= test_alu
 TOPLEVEL ?= alu
 
@@ -34,6 +34,8 @@ _PROGRAMS_LINK := $(shell ln -sfn ../programs $(PWD_DIR)/programs)
 # For top-level integration modules, all RTL files are needed
 ifeq ($(TOPLEVEL),riscv_single_cycle)
   VERILOG_SOURCES = $(wildcard $(RTL_DIR)/*.v)
+else ifeq ($(TOPLEVEL),riscv_pipeline)
+  VERILOG_SOURCES = $(wildcard $(RTL_DIR)/*.v)
 else ifeq ($(wildcard $(RTL_DIR)/$(TOPLEVEL).v),)
   VERILOG_SOURCES = $(wildcard $(RTL_DIR)/*.v)
 else
@@ -50,7 +52,7 @@ COCOTB_MAKEFILES ?= $(shell cocotb-config --makefiles 2>/dev/null || python3 -c 
 include $(COCOTB_MAKEFILES)/Makefile.sim
 
 # Convenience shorthand targets
-.PHONY: test_alu test_regfile test_single_cycle test_all waves_alu waves_regfile waves_single_cycle clean_all link_programs
+.PHONY: test_alu test_regfile test_single_cycle test_pipeline_basic test_all waves_alu waves_regfile waves_single_cycle waves_pipeline_basic clean_all link_programs
 
 link_programs:
 	@ln -sfn ../programs $(PWD_DIR)/programs
@@ -67,7 +69,11 @@ test_single_cycle: link_programs
 	$(MAKE) MODULE=test_single_cycle TOPLEVEL=riscv_single_cycle SIM_BUILD=sim_build_riscv_single_cycle WAVES=$(WAVES)
 	@ln -sf riscv_single_cycle.fst sim_build_riscv_single_cycle/dump.fst 2>/dev/null || true
 
-test_all: test_alu test_regfile test_single_cycle
+test_pipeline_basic: link_programs
+	$(MAKE) MODULE=test_pipeline_basic TOPLEVEL=riscv_pipeline SIM_BUILD=sim_build_riscv_pipeline WAVES=$(WAVES)
+	@ln -sf riscv_pipeline.fst sim_build_riscv_pipeline/dump.fst 2>/dev/null || true
+
+test_all: test_alu test_regfile test_single_cycle test_pipeline_basic
 
 waves_alu: test_alu
 	gtkwave sim_build_alu/alu.fst &
@@ -77,6 +83,9 @@ waves_regfile: test_regfile
 
 waves_single_cycle: test_single_cycle
 	gtkwave sim_build_riscv_single_cycle/riscv_single_cycle.fst &
+
+waves_pipeline_basic: test_pipeline_basic
+	gtkwave sim_build_riscv_pipeline/riscv_pipeline.fst &
 
 clean_all:
 	rm -rf sim_build* __pycache__ *.vcd *.fst results.xml
