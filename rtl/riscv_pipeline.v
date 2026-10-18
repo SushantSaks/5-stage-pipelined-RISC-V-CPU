@@ -2,19 +2,29 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Design Name: RV32I 5-Stage Pipelined Processor
 // Module Name: riscv_pipeline
-// Description: Top-level 5-stage pipelined RV32I processor module:
-//              - Stage 1: Instruction Fetch (IF)
-//              - Stage 2: Instruction Decode & Register Fetch (ID)
-//              - Stage 3: Execute / Address Calculation (EX)
+// Description: Top-level 5-stage pipelined RV32I processor with Hazard Resolution:
+//              - Stage 1: Instruction Fetch (IF) with PC stall
+//              - Stage 2: Instruction Decode & Register Fetch (ID) with stall/flush
+//              - Stage 3: Execute (EX) with ALU operand forwarding & branch flush
 //              - Stage 4: Memory Access (MEM)
 //              - Stage 5: Writeback (WB)
-//              Structural pipeline segmentation without hazard handling.
+//              - Integrated Hazard Unit resolving RAW, Load-Use, and Control hazards
 //////////////////////////////////////////////////////////////////////////////////
 
 module riscv_pipeline (
     input wire clk,
     input wire reset
 );
+
+    // =========================================================================
+    // Hazard Control Signals
+    // =========================================================================
+    wire [1:0] ForwardAE;
+    wire [1:0] ForwardBE;
+    wire       StallF;
+    wire       StallD;
+    wire       FlushD;
+    wire       FlushE;
 
     // =========================================================================
     // Stage 1: Instruction Fetch (IF) Signals
@@ -111,10 +121,11 @@ module riscv_pipeline (
     assign PCPlus4F = PCF + 32'd4;
     assign PCNextF  = PCSrcE ? PCTargetE : PCPlus4F;
 
+    // Program counter updates on posedge clk; stalls when StallF is asserted
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             PCF <= 32'd0;
-        end else begin
+        end else if (!StallF) begin
             PCF <= PCNextF;
         end
     end
@@ -125,11 +136,12 @@ module riscv_pipeline (
     );
 
     // Pipeline Register: IF -> ID
+    // Stalls on StallD; Flushes on FlushD (branch taken)
     IF_ID_reg u_if_id_reg (
         .clk(clk),
         .reset(reset),
-        .clr(1'b0),
-        .en(1'b1),
+        .clr(FlushD),
+        .en(!StallD),
         .PCF(PCF),
         .InstrF(InstrF),
         .PCPlus4F(PCPlus4F),
@@ -175,10 +187,11 @@ module riscv_pipeline (
     );
 
     // Pipeline Register: ID -> EX
+    // Flushes on FlushE (load-use stall bubble OR branch taken flush)
     ID_EX_reg u_id_ex_reg (
         .clk(clk),
         .reset(reset),
-        .clr(1'b0),
+        .clr(FlushE),
         .en(1'b1),
         .RegWriteD(RegWriteD),
         .ResultSrcD(ResultSrcD),
@@ -215,9 +228,15 @@ module riscv_pipeline (
     // =========================================================================
     // 3. EXECUTE (EX) STAGE
     // =========================================================================
-    assign SrcAE      = RD1E;
-    assign WriteDataE = RD2E;
-    assign SrcBE      = ALUSrcE ? ImmExtE : WriteDataE;
+    // 3-to-1 Multiplexers for Data Forwarding
+    assign SrcAE = (ForwardAE == 2'b10) ? ALUResultM :
+                   (ForwardAE == 2'b01) ? ResultW    : RD1E;
+
+    assign WriteDataE = (ForwardBE == 2'b10) ? ALUResultM :
+                        (ForwardBE == 2'b01) ? ResultW    : RD2E;
+
+    // ALU 2nd operand selection (Immediate vs Forwarded Register Data)
+    assign SrcBE = ALUSrcE ? ImmExtE : WriteDataE;
 
     alu u_alu (
         .A(SrcAE),
@@ -289,5 +308,28 @@ module riscv_pipeline (
     assign ResultW = (ResultSrcW == 2'b00) ? ALUResultW :
                      (ResultSrcW == 2'b01) ? ReadDataW  :
                      (ResultSrcW == 2'b10) ? PCPlus4W   : 32'd0;
+
+    // =========================================================================
+    // 6. HAZARD UNIT
+    // =========================================================================
+    hazard_unit u_hazard (
+        .Rs1D(Rs1D),
+        .Rs2D(Rs2D),
+        .Rs1E(Rs1E),
+        .Rs2E(Rs2E),
+        .RdE(RdE),
+        .RdM(RdM),
+        .RdW(RdW),
+        .RegWriteM(RegWriteM),
+        .RegWriteW(RegWriteW),
+        .ResultSrcE(ResultSrcE),
+        .PCSrcE(PCSrcE),
+        .ForwardAE(ForwardAE),
+        .ForwardBE(ForwardBE),
+        .StallF(StallF),
+        .StallD(StallD),
+        .FlushD(FlushD),
+        .FlushE(FlushE)
+    );
 
 endmodule

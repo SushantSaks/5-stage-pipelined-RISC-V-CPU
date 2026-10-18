@@ -130,39 +130,48 @@ module control_unit (
     // =========================================================================
     // 2. ALU Decoder
     // =========================================================================
-    // 4-bit ALUControl encodings matching rtl/alu.v:
-    // 0000: ADD, 0001: SUB, 0010: AND, 0011: OR, 0100: XOR
-    // 0101: SLT, 0110: SLTU, 0111: SLL, 1000: SRL, 1001: SRA
+    // 4-bit ALUControl encodings strictly matching rtl/alu.v:
+    localparam [3:0] ALU_ADD  = 4'b0000; // Addition: A + B
+    localparam [3:0] ALU_SUB  = 4'b0001; // Subtraction: A - B (for Branch equality test)
+    localparam [3:0] ALU_AND  = 4'b0010; // Bitwise AND: A & B
+    localparam [3:0] ALU_OR   = 4'b0011; // Bitwise OR: A | B
+    localparam [3:0] ALU_XOR  = 4'b0100; // Bitwise XOR: A ^ B
+    localparam [3:0] ALU_SLT  = 4'b0101; // Set Less Than (Signed)
+    localparam [3:0] ALU_SLTU = 4'b0110; // Set Less Than (Unsigned)
+    localparam [3:0] ALU_SLL  = 4'b0111; // Shift Left Logical
+    localparam [3:0] ALU_SRL  = 4'b1000; // Shift Right Logical
+    localparam [3:0] ALU_SRA  = 4'b1001; // Shift Right Arithmetic
+
     always @(*) begin
         case (ALUOp)
-            2'b00: ALUControl = 4'b0000; // ADD (for Load, Store, LUI)
-            2'b01: ALUControl = 4'b0001; // SUB (for Branch equality test)
+            2'b00: ALUControl = ALU_ADD; // ADD (for Load, Store, LUI)
+            2'b01: ALUControl = ALU_SUB; // SUB (for Branch equality test)
             2'b10: begin                 // R-type and I-type ALU operations
                 case (funct3)
                     3'b000: begin
                         // For R-type (op[5]==1), funct7b5 differentiates ADD and SUB.
                         // For I-type (op[5]==0, addi), always perform ADD.
                         if (op[5] & funct7b5)
-                            ALUControl = 4'b0001; // SUB
+                            ALUControl = ALU_SUB;
                         else
-                            ALUControl = 4'b0000; // ADD
+                            ALUControl = ALU_ADD;
                     end
-                    3'b001: ALUControl = 4'b0111; // SLL
-                    3'b010: ALUControl = 4'b0101; // SLT
-                    3'b011: ALUControl = 4'b0110; // SLTU
-                    3'b100: ALUControl = 4'b0100; // XOR
+                    3'b001: ALUControl = ALU_SLL;
+                    3'b010: ALUControl = ALU_SLT;
+                    3'b011: ALUControl = ALU_SLTU;
+                    3'b100: ALUControl = ALU_XOR;
                     3'b101: begin
                         if (funct7b5)
-                            ALUControl = 4'b1001; // SRA
+                            ALUControl = ALU_SRA;
                         else
-                            ALUControl = 4'b1000; // SRL
+                            ALUControl = ALU_SRL;
                     end
-                    3'b110: ALUControl = 4'b0011; // OR
-                    3'b111: ALUControl = 4'b0010; // AND
-                    default: ALUControl = 4'b0000;
+                    3'b110: ALUControl = ALU_OR;
+                    3'b111: ALUControl = ALU_AND;
+                    default: ALUControl = ALU_ADD;
                 endcase
             end
-            default: ALUControl = 4'b0000;
+            default: ALUControl = ALU_ADD;
         endcase
     end
 

@@ -45,10 +45,13 @@ module regfile (
         end
     end
 
-    // Dual asynchronous (combinational) read ports
+    // Dual asynchronous (combinational) read ports with write-through forwarding
     // Register x0 is strictly hardwired to 32'h00000000
-    assign rd1 = (rs1 == 5'd0) ? 32'd0 : rf[rs1];
-    assign rd2 = (rs2 == 5'd0) ? 32'd0 : rf[rs2];
+    // If a register is currently being written (we == 1), bypass the write data to the read port
+    assign rd1 = (rs1 == 5'd0) ? 32'd0 :
+                 (we && (rd == rs1)) ? wd : rf[rs1];
+    assign rd2 = (rs2 == 5'd0) ? 32'd0 :
+                 (we && (rd == rs2)) ? wd : rf[rs2];
 
     // Synchronous write port: triggered on the rising edge of clk
     // Writes to register x0 are strictly ignored
