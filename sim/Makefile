@@ -52,7 +52,7 @@ COCOTB_MAKEFILES ?= $(shell cocotb-config --makefiles 2>/dev/null || python3 -c 
 include $(COCOTB_MAKEFILES)/Makefile.sim
 
 # Convenience shorthand targets
-.PHONY: test_alu test_regfile test_single_cycle test_pipeline_basic test_pipeline_hazards test_all waves_alu waves_regfile waves_single_cycle waves_pipeline_basic waves_pipeline_hazards clean_all link_programs
+.PHONY: test_alu test_regfile test_single_cycle test_pipeline_basic test_pipeline_hazards test_pipeline_perf test_all waves_alu waves_regfile waves_single_cycle waves_pipeline_basic waves_pipeline_hazards waves_pipeline_perf clean_all link_programs
 
 link_programs:
 	@ln -sfn ../programs $(PWD_DIR)/programs
@@ -77,7 +77,11 @@ test_pipeline_hazards: link_programs
 	$(MAKE) MODULE=test_pipeline_hazards TOPLEVEL=riscv_pipeline SIM_BUILD=sim_build_riscv_pipeline WAVES=$(WAVES)
 	@ln -sf riscv_pipeline.fst sim_build_riscv_pipeline/dump.fst 2>/dev/null || true
 
-test_all: test_alu test_regfile test_single_cycle test_pipeline_basic test_pipeline_hazards
+test_pipeline_perf: link_programs
+	$(MAKE) MODULE=test_pipeline_perf TOPLEVEL=riscv_pipeline SIM_BUILD=sim_build_riscv_pipeline WAVES=$(WAVES)
+	@ln -sf riscv_pipeline.fst sim_build_riscv_pipeline/dump.fst 2>/dev/null || true
+
+test_all: test_alu test_regfile test_single_cycle test_pipeline_basic test_pipeline_hazards test_pipeline_perf
 
 waves_alu: test_alu
 	gtkwave sim_build_alu/alu.fst &
@@ -92,6 +96,9 @@ waves_pipeline_basic: test_pipeline_basic
 	gtkwave sim_build_riscv_pipeline/riscv_pipeline.fst &
 
 waves_pipeline_hazards: test_pipeline_hazards
+	gtkwave sim_build_riscv_pipeline/riscv_pipeline.fst &
+
+waves_pipeline_perf: test_pipeline_perf
 	gtkwave sim_build_riscv_pipeline/riscv_pipeline.fst &
 
 clean_all:

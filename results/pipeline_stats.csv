@@ -1,0 +1,7 @@
+Metric,Value
+Total Cycles,250
+Executed Instructions,172
+Stalls,20
+Flushes,48
+IPC,0.6880
+CPI,1.4535
