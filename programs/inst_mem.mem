@@ -1,10 +1,13 @@
 // programs/inst_mem.mem
-// Hex representation of sample RV32I instructions for InstructionMemory initialization
-00500093 // addi x1, x0, 5
-00a00113 // addi x2, x0, 10
-002081b3 // add  x3, x1, x2
-40208233 // sub  x4, x1, x2
-0020f2b3 // and  x5, x1, x2
-0020e333 // or   x6, x1, x2
-0020c3b3 // xor  x7, x1, x2
-00000013 // nop (addi x0, x0, 0)
+// Assembly program verifying RV32I single-cycle execution:
+// addi, add, sw, lw, beq branch target jump, and data memory store.
+00500093 // 0x00: addi x1, x0, 5     (x1 = 5)
+00a00113 // 0x04: addi x2, x0, 10    (x2 = 10)
+002081b3 // 0x08: add  x3, x1, x2    (x3 = 15)
+00302223 // 0x0C: sw   x3, 4(x0)     (Mem[1] = 15)
+00402203 // 0x10: lw   x4, 4(x0)     (x4 = Mem[1] = 15)
+00418463 // 0x14: beq  x3, x4, 8     (Branch to 0x1C, skipping 0x18)
+00100293 // 0x18: addi x5, x0, 1     (Skipped if branch taken)
+02a00293 // 0x1C: addi x5, x0, 42    (Branch target: x5 = 42)
+00502423 // 0x20: sw   x5, 8(x0)     (Mem[2] = 42)
+00000013 // 0x24: nop (addi x0, x0, 0)

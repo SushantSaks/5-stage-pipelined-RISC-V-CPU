@@ -2,9 +2,12 @@
 sim_build*/
 sim/sim_build*/
 sim/work/
+sim/programs
 sim/*.vcd
+sim/*.fst
 sim/results.xml
 *.vcd
+*.fst
 results.xml
 
 # Python Cache
