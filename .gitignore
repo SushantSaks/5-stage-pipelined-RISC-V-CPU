@@ -1,0 +1,21 @@
+# Cocotb & Simulator Build Artifacts
+sim_build*/
+sim/sim_build*/
+sim/work/
+sim/*.vcd
+sim/results.xml
+*.vcd
+results.xml
+
+# Python Cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Vivado / EDA Artifacts
+.Xil/
+*.jou
+*.log
+*.pb
+*.wdb
+xsim.dir/

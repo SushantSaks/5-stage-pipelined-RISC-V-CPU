@@ -1,0 +1,10 @@
+// programs/inst_mem.mem
+// Hex representation of sample RV32I instructions for InstructionMemory initialization
+00500093 // addi x1, x0, 5
+00a00113 // addi x2, x0, 10
+002081b3 // add  x3, x1, x2
+40208233 // sub  x4, x1, x2
+0020f2b3 // and  x5, x1, x2
+0020e333 // or   x6, x1, x2
+0020c3b3 // xor  x7, x1, x2
+00000013 // nop (addi x0, x0, 0)
